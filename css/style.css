@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+
+/* Hide Scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Tab Styling */
+.tab-btn {
+    padding: 8px 16px;
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    white-space: nowrap;
+    transition: all 0.2s;
+    background: white;
+    border: 1px solid #e5e7eb;
+}
+.tab-btn.active {
+    background: #ea580c; /* Orange 600 */
+    color: white;
+    border-color: #ea580c;
+    box-shadow: 0 2px 4px rgba(234, 88, 12, 0.2);
+}
+
+/* Animations */
+@keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Card Press Effect */
+.menu-card:active { transform: scale(0.98); }
