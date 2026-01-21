@@ -1,5 +1,5 @@
 import { menuData } from './data.js';
-import { db } from './config.js';
+import { db } from './db.js';
 import { initAuth } from './auth.js';
 
 // --- STATE VARIABLES ---
