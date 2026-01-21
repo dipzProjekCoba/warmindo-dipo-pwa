@@ -1,5 +1,5 @@
 import { menuData } from './data.js';
-import { dbController } from './db.js'; // Menggunakan Controller, bukan direct DB
+import { dbController } from './db.js'; 
 import { initAuth } from './auth.js';
 
 // --- STATE VARIABLES ---
