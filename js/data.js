@@ -7,6 +7,7 @@ export const menuData = [
     { id: 'm5', name: 'Indomie Nyemek Jogja', price: 7000, cat: 'indomie' },
     { id: 'm6', name: 'Indomie Goreng (Ori)', price: 7000, cat: 'indomie' },
     { id: 'm7', name: 'Indomie Rendang', price: 7000, cat: 'indomie' },
+    { id: 'm8', name: 'Indomie Goreng Aceh', price: 7000, cat: 'indomie' },
 
     // 2. TOPPING
     { id: 't1', name: 'Sayur', price: 1000, cat: 'topping' },
