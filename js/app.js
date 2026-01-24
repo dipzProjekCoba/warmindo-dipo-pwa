@@ -1,57 +1,86 @@
-import { menuData } from './data.js';
+// js/app.js
 import { dbController } from './db.js'; 
 import { initAuth } from './auth.js';
+import { sbController } from './sb.js';
 
 // --- STATE VARIABLES ---
 let cart = [];
-let selectedTempItem = null; // Untuk menyimpan item sementara saat pilih Es/Panas
+let menuList = []; // Menu sekarang diambil dari Supabase
+let selectedTempItem = null;
+let modeGudang = false; // False = Kasir, True = Update Stok
 
 // --- INIT ---
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Cek Login
+document.addEventListener('DOMContentLoaded', async () => {
     initAuth();
-
-    // 2. Render Menu Awal
-    renderMenu('all');
-
-    // 3. Setup Tombol & Listener
     setupEventListeners();
-    
-    // 4. Set Tanggal Default ke Hari Ini
+    injectGudangButton(); // Pasang tombol rahasia
+
+    // Load data awal
+    await refreshMenuData();
+
+    // Set tanggal hari ini
     const today = new Date().toISOString().slice(0, 10);
     const datePicker = document.getElementById('date-picker');
     if(datePicker) {
         datePicker.value = today;
-        // Load data rekap hari ini
         loadRekapData(today);
     }
 });
 
-// --- RENDER MENU UI ---
+// --- FUNGSI DATA ---
+async function refreshMenuData() {
+    // Tampilkan loading kalau perlu, atau biarkan background process
+    const data = await sbController.fetchMenu();
+    if (data && data.length > 0) {
+        menuList = data;
+        renderMenu('all'); // Render ulang tampilan
+    }
+}
+
+// --- RENDER UI ---
 function renderMenu(category) {
     const grid = document.getElementById('menu-grid');
     if(!grid) return;
-    
     grid.innerHTML = '';
 
+    // Filter kategori
     const items = category === 'all' 
-        ? menuData 
-        : menuData.filter(item => item.cat === category);
+        ? menuList 
+        : menuList.filter(item => item.kategori === category);
 
     items.forEach(item => {
-        const div = document.createElement('div');
-        div.className = `menu-card bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between h-32 cursor-pointer active:bg-orange-50 transition relative overflow-hidden`;
-        div.onclick = () => addToCartLogic(item);
+        // Logic Tampilan Stok
+        const isHabis = item.lacak_stok && item.stok <= 0;
+        const stokText = item.lacak_stok ? `Sisa: ${item.stok}` : '';
+        const stokColor = item.stok < 5 && item.lacak_stok ? 'text-red-500' : 'text-gray-400';
         
+        // Warna kartu (Abu-abu kalau habis di mode kasir)
+        // Di mode Gudang, tetap nyala biar bisa diisi stoknya
+        const cardBg = (isHabis && !modeGudang) ? 'bg-gray-100 opacity-60 grayscale' : 'bg-white';
+        const cursor = (isHabis && !modeGudang) ? 'cursor-not-allowed' : 'cursor-pointer active:bg-orange-50';
+
+        const div = document.createElement('div');
+        div.className = `menu-card ${cardBg} p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between h-36 transition relative overflow-hidden ${cursor}`;
+        
+        // Logic Klik: Beda aksi tergantung Mode
+        div.onclick = () => handleItemClick(item);
+
+        // Icon tombol (Plus atau Edit)
+        const actionIcon = modeGudang ? '<i class="fas fa-edit"></i>' : '<i class="fas fa-plus"></i>';
+        const actionColor = modeGudang ? 'text-blue-600 bg-blue-50' : (isHabis ? 'text-gray-300 bg-gray-200' : 'text-orange-500 bg-gray-50');
+
         div.innerHTML = `
             <div>
-                <span class="text-[10px] font-bold text-orange-500 uppercase tracking-wide bg-orange-100 px-2 py-0.5 rounded-md">${item.cat}</span>
-                <h3 class="font-bold text-gray-800 leading-tight mt-2 line-clamp-2">${item.name}</h3>
+                <div class="flex justify-between items-start">
+                    <span class="text-[10px] font-bold text-orange-500 uppercase tracking-wide bg-orange-100 px-2 py-0.5 rounded-md">${item.kategori}</span>
+                    <span class="text-[10px] font-bold ${stokColor}">${stokText}</span>
+                </div>
+                <h3 class="font-bold text-gray-800 leading-tight mt-2 line-clamp-2">${item.nama}</h3>
             </div>
             <div class="flex justify-between items-end">
-                <p class="font-bold text-gray-600">Rp ${item.price.toLocaleString()}</p>
-                <div class="bg-gray-50 rounded-full w-6 h-6 flex items-center justify-center text-orange-500 text-xs">
-                    <i class="fas fa-plus"></i>
+                <p class="font-bold text-gray-600">Rp ${item.harga.toLocaleString()}</p>
+                <div class="${actionColor} rounded-full w-8 h-8 flex items-center justify-center text-xs shadow-sm">
+                    ${actionIcon}
                 </div>
             </div>
         `;
@@ -59,22 +88,66 @@ function renderMenu(category) {
     });
 }
 
-// --- LOGIC KERANJANG ---
-function addToCartLogic(item) {
-    // Logic Khusus: Minuman Non Kopi Wajib Pilih Suhu
-    if (item.cat === 'nonkopi') {
+// --- LOGIC INTERAKSI ---
+function handleItemClick(item) {
+    // 1. MODE GUDANG (UPDATE STOK)
+    if (modeGudang) {
+        handleUpdateStok(item);
+        return;
+    }
+
+    // 2. MODE KASIR (JUALAN)
+    if (item.lacak_stok && item.stok <= 0) {
+        showToast("❌ Stok Habis Bos!");
+        return;
+    }
+    
+    // Cek apakah varian minuman
+    if (item.kategori === 'nonkopi') {
         selectedTempItem = item;
-        document.getElementById('variant-item-name').innerText = item.name;
+        document.getElementById('variant-item-name').innerText = item.nama;
         document.getElementById('modal-variant').classList.remove('hidden');
     } else {
-        // Default variant logic
         let variant = '-';
-        if (item.cat === 'kopi') variant = 'Panas'; // Kopi default panas
+        if (item.kategori === 'kopi') variant = 'Panas';
         addItemToCart(item, variant);
     }
 }
 
+// --- LOGIC GUDANG (BARU) ---
+async function handleUpdateStok(item) {
+    if (!item.lacak_stok) {
+        alert("Menu ini unlimited, tidak perlu atur stok.");
+        return;
+    }
+
+    const input = prompt(`UPDATE STOK: ${item.nama}\n\nStok Sekarang: ${item.stok}\n\nMasukkan JUMLAH TAMBAHAN (Misal habis belanja 10 bungkus, ketik 10):`);
+    
+    if (input && !isNaN(input)) {
+        try {
+            const tambah = parseInt(input);
+            const stokBaru = await sbController.addStock(item.id, tambah);
+            alert(`✅ Berhasil! Stok ${item.nama} sekarang: ${stokBaru}`);
+            // Refresh data lokal
+            await refreshMenuData();
+        } catch (e) {
+            alert("Gagal update: " + e.message);
+        }
+    }
+}
+
+// --- LOGIC KERANJANG & CHECKOUT ---
 function addItemToCart(item, variant) {
+    // Cek stok lokal di keranjang (biar gak minus pas diklik berkali-kali)
+    const existingQty = cart
+        .filter(c => c.id === item.id)
+        .reduce((sum, c) => sum + c.qty, 0);
+
+    if (item.lacak_stok && (existingQty + 1) > item.stok) {
+        showToast("✋ Stok tidak cukup!");
+        return;
+    }
+
     const existing = cart.find(c => c.id === item.id && c.variant === variant);
     if (existing) {
         existing.qty++;
@@ -82,33 +155,31 @@ function addItemToCart(item, variant) {
         cart.push({ ...item, qty: 1, variant: variant });
     }
     updateCartUI();
-    showToast(`${item.name} masuk keranjang`);
+    showToast(`${item.nama} masuk keranjang`);
 }
 
 function updateCartUI() {
     const count = cart.reduce((acc, item) => acc + item.qty, 0);
-    const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+    const total = cart.reduce((acc, item) => acc + (item.harga * item.qty), 0);
     
-    // Update Badge Notifikasi
     const badge = document.getElementById('cart-count');
     if(badge) {
         badge.innerText = count;
         badge.classList.toggle('hidden', count === 0);
     }
 
-    // Update List di Modal Cart
     const list = document.getElementById('cart-items');
     if(list) {
         list.innerHTML = cart.map((item, index) => `
             <div class="flex justify-between items-center mb-3 border-b border-gray-100 pb-2 last:border-0">
                 <div>
-                    <p class="font-bold text-gray-800 text-sm">${item.name} <span class="text-orange-600 text-xs">${item.variant !== '-' ? `(${item.variant})` : ''}</span></p>
-                    <p class="text-xs text-gray-500">Rp ${item.price.toLocaleString()} x ${item.qty}</p>
+                    <p class="font-bold text-gray-800 text-sm">${item.nama} <span class="text-orange-600 text-xs">${item.variant !== '-' ? `(${item.variant})` : ''}</span></p>
+                    <p class="text-xs text-gray-500">Rp ${item.harga.toLocaleString()} x ${item.qty}</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <button onclick="window.updateQty(${index}, -1)" class="w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold hover:bg-gray-200">-</button>
+                    <button onclick="window.updateQty(${index}, -1)" class="w-7 h-7 rounded-full bg-gray-100 text-gray-600 font-bold">-</button>
                     <span class="font-bold w-4 text-center text-sm">${item.qty}</span>
-                    <button onclick="window.updateQty(${index}, 1)" class="w-7 h-7 rounded-full bg-orange-100 text-orange-600 font-bold hover:bg-orange-200">+</button>
+                    <button onclick="window.updateQty(${index}, 1)" class="w-7 h-7 rounded-full bg-orange-100 text-orange-600 font-bold">+</button>
                 </div>
             </div>
         `).join('');
@@ -122,111 +193,197 @@ function updateCartUI() {
     if(totalEl) totalEl.innerText = `Rp ${total.toLocaleString()}`;
 }
 
-// Global scope function agar bisa dipanggil dari onclick HTML string
 window.updateQty = (index, change) => {
+    // Validasi stok saat nambah qty di cart modal
+    if (change > 0) {
+        const item = cart[index];
+        const totalInCart = cart.filter(c => c.id === item.id).reduce((sum, c) => sum + c.qty, 0);
+        const stockData = menuList.find(m => m.id === item.id);
+        
+        if (stockData && stockData.lacak_stok && (totalInCart + 1) > stockData.stok) {
+            showToast("✋ Stok mentok bos!");
+            return;
+        }
+    }
+
     cart[index].qty += change;
     if (cart[index].qty <= 0) cart.splice(index, 1);
     updateCartUI();
 };
 
-
-// --- DATABASE TRANSAKSI (MENGGUNAKAN DB CONTROLLER) ---
-
-// 1. Simpan Transaksi (Tombol Bayar)
 async function checkout() {
-    if (cart.length === 0) return alert("Keranjang kosong bro!");
+    if (cart.length === 0) return alert("Keranjang kosong!");
     
     const btn = document.getElementById('btn-checkout');
     const originalText = btn.innerHTML;
-    
-    // UI Loading State
     btn.disabled = true;
-    btn.innerText = "Menyimpan...";
-    btn.classList.add('opacity-70', 'cursor-not-allowed');
-
-    const dateInput = document.getElementById('date-picker').value;
-    const total = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
-    
-    // Format detail barang jadi string biar mudah dibaca di Excel
-    const detailString = cart.map(i => `${i.name} ${i.variant!='-'?`(${i.variant})`:''} (${i.qty})`).join(', ');
-
-    const transaction = {
-        tanggal: dateInput,
-        waktu: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-        tipe: 'PENJUALAN',
-        detail: detailString,
-        total: total,
-        // Timestamp server (penting untuk sorting akurat)
-        created_at: firebase.database.ServerValue.TIMESTAMP 
-    };
+    btn.innerText = "Memproses...";
 
     try {
-        // PANGGIL FUNGSI DARI DB.JS
+        // 1. KURANGI STOK DI SUPABASE
+        await sbController.reduceStock(cart);
+
+        // 2. SIMPAN TRANSAKSI DI FIREBASE (Laporan)
+        const dateInput = document.getElementById('date-picker').value;
+        const total = cart.reduce((acc, item) => acc + (item.harga * item.qty), 0);
+        const detailString = cart.map(i => `${i.nama} ${i.variant!='-'?`(${i.variant})`:''} (${i.qty})`).join(', ');
+
+        const transaction = {
+            tanggal: dateInput,
+            waktu: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+            tipe: 'PENJUALAN',
+            detail: detailString,
+            total: total,
+            created_at: firebase.database.ServerValue.TIMESTAMP 
+        };
+
         await dbController.addTransaction(transaction);
         
-        // Reset state jika sukses
+        // 3. SUKSES & RESET
         cart = [];
         updateCartUI();
         document.getElementById('modal-cart').classList.add('hidden');
-        showToast("✅ Transaksi Berhasil!");
+        showToast("✅ Transaksi Sukses!");
+        
+        // Refresh Stok di tampilan agar update
+        await refreshMenuData();
         
     } catch (error) {
         console.error(error);
-        alert("Gagal simpan: " + error.message);
+        alert("Gagal transaksi: " + error.message);
     } finally {
-        // Reset tombol
         btn.disabled = false;
         btn.innerHTML = originalText;
-        btn.classList.remove('opacity-70', 'cursor-not-allowed');
     }
 }
 
-// 2. Simpan Pengeluaran (Makan Owner)
-window.handleUangMakan = async function() {
-    if(!confirm("Yakin input jatah makan (-10rb)?")) return;
+// --- FITUR TAMBAHAN ---
+// Inject Tombol Mode Gudang di Header
+function injectGudangButton() {
+    const headerDiv = document.querySelector('header > div:first-child');
+    if (!headerDiv) return;
 
-    const dateInput = document.getElementById('date-picker').value;
-    const btn = document.querySelector('button[onclick="handleUangMakan()"]');
-    btn.disabled = true;
-
-    const expense = {
-        tanggal: dateInput,
-        waktu: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-        tipe: 'MAKAN_OWNER',
-        detail: 'Jatah Makan Harian',
-        total: 10000,
-        created_at: firebase.database.ServerValue.TIMESTAMP
+    // Buat tombol kecil di samping nama "Warmindo Dipo"
+    const btnMode = document.createElement('button');
+    btnMode.innerHTML = '<i class="fas fa-boxes"></i>';
+    btnMode.className = "ml-2 w-8 h-8 rounded-full bg-gray-100 text-gray-400 text-xs flex items-center justify-center hover:bg-blue-100 hover:text-blue-600 transition";
+    btnMode.title = "Mode Gudang (Cek Stok)";
+    
+    btnMode.onclick = () => {
+        modeGudang = !modeGudang;
+        if (modeGudang) {
+            btnMode.className = "ml-2 w-8 h-8 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center shadow-lg ring-2 ring-blue-200";
+            showToast("🔧 MODE GUDANG AKTIF: Klik menu untuk tambah stok");
+            document.body.style.borderTop = "4px solid #2563eb"; // Indikator Visual Biru
+        } else {
+            btnMode.className = "ml-2 w-8 h-8 rounded-full bg-gray-100 text-gray-400 text-xs flex items-center justify-center hover:bg-blue-100 transition";
+            showToast("🛒 KEMBALI KE MODE KASIR");
+            document.body.style.borderTop = "none";
+        }
+        renderMenu(document.querySelector('.tab-btn.active').dataset.cat);
     };
 
+    // Sisipkan setelah teks tanggal/status
+    headerDiv.appendChild(btnMode);
+}
+
+// Global functions
+window.handleUangMakan = async function() {
+    if(!confirm("Yakin input jatah makan (-10rb)?")) return;
+    const dateInput = document.getElementById('date-picker').value;
     try {
-        // PANGGIL FUNGSI DARI DB.JS
-        await dbController.addExpense(expense);
+        await dbController.addExpense({
+            tanggal: dateInput,
+            waktu: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+            tipe: 'MAKAN_OWNER',
+            detail: 'Jatah Makan Harian',
+            total: 10000,
+            created_at: firebase.database.ServerValue.TIMESTAMP
+        });
         showToast("🍽️ Makan tercatat!");
-    } catch (e) {
-        alert("Error: " + e.message);
-    } finally {
-        btn.disabled = false;
+    } catch (e) { alert("Error: " + e.message); }
+}
+
+// Setup Event Listeners
+function setupEventListeners() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            renderMenu(e.target.dataset.cat);
+        });
+    });
+
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = e.currentTarget.dataset.target;
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.remove('active', 'text-orange-600');
+                b.classList.add('text-gray-400');
+            });
+            e.currentTarget.classList.add('active', 'text-orange-600');
+            e.currentTarget.classList.remove('text-gray-400');
+
+            if(target === 'kasir') {
+                document.getElementById('main-content').classList.remove('hidden');
+                document.getElementById('rekap-view').classList.add('hidden');
+            } else {
+                document.getElementById('main-content').classList.add('hidden');
+                document.getElementById('rekap-view').classList.remove('hidden');
+                loadRekapData(document.getElementById('date-picker').value); 
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-variant').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const variant = e.currentTarget.dataset.var;
+            if(selectedTempItem) {
+                addItemToCart(selectedTempItem, variant);
+                selectedTempItem = null;
+            }
+            document.getElementById('modal-variant').classList.add('hidden');
+        });
+    });
+
+    const fabCart = document.getElementById('fab-cart');
+    if(fabCart) fabCart.addEventListener('click', () => document.getElementById('modal-cart').classList.remove('hidden'));
+    
+    const btnCheckout = document.getElementById('btn-checkout');
+    if(btnCheckout) btnCheckout.addEventListener('click', checkout);
+
+    const datePicker = document.getElementById('date-picker');
+    if(datePicker) {
+        datePicker.addEventListener('change', (e) => {
+            loadRekapData(e.target.value);
+            showToast(`📅 Data tanggal ${e.target.value} dimuat`);
+        });
     }
 }
 
+// Helper: Toast
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    const msgEl = document.getElementById('toast-msg');
+    if(t && msgEl) {
+        msgEl.innerText = msg;
+        t.classList.remove('opacity-0');
+        clearTimeout(window.toastTimer);
+        window.toastTimer = setTimeout(() => t.classList.add('opacity-0'), 2000);
+    }
+}
 
-// --- REALTIME REKAP (MENGGUNAKAN LISTENER DB.JS) ---
+// Helper: Rekap (Firebase Logic - disalin dari kode lama, disederhanakan panggilannya)
 function loadRekapData(date) {
-    // Reset angka dulu biar gak bingung pas ganti tanggal
     document.getElementById('stat-omset').innerText = 'Loading...';
     document.getElementById('stat-expense').innerText = 'Loading...';
     document.getElementById('history-list').innerHTML = '<p class="p-4 text-center text-xs text-gray-400">Memuat data...</p>';
 
-    // 1. Dengar data Penjualan
     dbController.listenTransactions(date, (snapshot) => {
         let omset = 0;
         let html = '';
         const data = [];
-
-        // Convert object ke array biar bisa dibalik (terbaru diatas)
-        snapshot.forEach(child => {
-            data.unshift(child.val()); // Unshift biar urutan terbalik
-        });
+        snapshot.forEach(child => data.unshift(child.val()));
         
         data.forEach(val => {
             omset += val.total;
@@ -243,130 +400,32 @@ function loadRekapData(date) {
                 </div>
             `;
         });
-
         document.getElementById('stat-omset').innerText = `Rp ${omset.toLocaleString()}`;
         document.getElementById('history-list').innerHTML = html || '<div class="p-8 text-center text-gray-300 flex flex-col items-center"><i class="fas fa-receipt text-3xl mb-2"></i><span class="text-xs">Belum ada penjualan</span></div>';
-        
         updateNetTotal(omset, null);
     });
 
-    // 2. Dengar data Pengeluaran
     dbController.listenExpenses(date, (snapshot) => {
         let expense = 0;
-        snapshot.forEach(child => {
-            expense += child.val().total;
-        });
+        snapshot.forEach(child => expense += child.val().total);
         document.getElementById('stat-expense').innerText = `Rp ${expense.toLocaleString()}`;
         updateNetTotal(null, expense);
     });
 }
 
-// Helper hitung bersih
 let tempOmset = 0;
 let tempExpense = 0;
 function updateNetTotal(omset, expense) {
     if(omset !== null) tempOmset = omset;
     if(expense !== null) tempExpense = expense;
-    
     const net = tempOmset - tempExpense;
     const el = document.getElementById('stat-net');
-    
     el.innerText = `Rp ${net.toLocaleString()}`;
-    
-    // Warna berubah kalau minus (rugi/boncos)
     if(net < 0) {
         el.classList.remove('text-blue-800');
         el.classList.add('text-red-600');
     } else {
         el.classList.add('text-blue-800');
         el.classList.remove('text-red-600');
-    }
-}
-
-
-// --- EVENT LISTENERS ---
-function setupEventListeners() {
-    // 1. Tab Kategori Menu
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-            renderMenu(e.target.dataset.cat);
-        });
-    });
-
-    // 2. Navigasi Bawah (Kasir vs Rekap)
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const target = e.currentTarget.dataset.target;
-            
-            // Style Active
-            document.querySelectorAll('.nav-btn').forEach(b => {
-                b.classList.remove('active', 'text-orange-600');
-                b.classList.add('text-gray-400');
-            });
-            e.currentTarget.classList.add('active', 'text-orange-600');
-            e.currentTarget.classList.remove('text-gray-400');
-
-            // Switch View
-            if(target === 'kasir') {
-                document.getElementById('main-content').classList.remove('hidden');
-                document.getElementById('rekap-view').classList.add('hidden');
-                document.getElementById('header-title').innerText = "Warmindo Dipo"; // Reset title
-            } else {
-                document.getElementById('main-content').classList.add('hidden');
-                document.getElementById('rekap-view').classList.remove('hidden');
-                // Refresh data saat masuk tab rekap
-                loadRekapData(document.getElementById('date-picker').value); 
-            }
-        });
-    });
-
-    // 3. Modal Variants
-    document.querySelectorAll('.btn-variant').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const variant = e.currentTarget.dataset.var; // Es / Panas
-            if(selectedTempItem) {
-                addItemToCart(selectedTempItem, variant);
-                selectedTempItem = null; // Reset
-            }
-            document.getElementById('modal-variant').classList.add('hidden');
-        });
-    });
-
-    // 4. Cart Modal
-    const fabCart = document.getElementById('fab-cart');
-    if(fabCart) {
-        fabCart.addEventListener('click', () => {
-            document.getElementById('modal-cart').classList.remove('hidden');
-        });
-    }
-    
-    // 5. Checkout Button
-    const btnCheckout = document.getElementById('btn-checkout');
-    if(btnCheckout) {
-        btnCheckout.addEventListener('click', checkout);
-    }
-
-    // 6. Ganti Tanggal (Date Picker)
-    const datePicker = document.getElementById('date-picker');
-    if(datePicker) {
-        datePicker.addEventListener('change', (e) => {
-            loadRekapData(e.target.value);
-            showToast(`📅 Data tanggal ${e.target.value} dimuat`);
-        });
-    }
-}
-
-// Helper: Toast Notification
-function showToast(msg) {
-    const t = document.getElementById('toast');
-    const msgEl = document.getElementById('toast-msg');
-    if(t && msgEl) {
-        msgEl.innerText = msg;
-        t.classList.remove('opacity-0');
-        // Reset timer kalau ada toast baru biar gak kedip
-        clearTimeout(window.toastTimer);
-        window.toastTimer = setTimeout(() => t.classList.add('opacity-0'), 2000);
     }
 }
