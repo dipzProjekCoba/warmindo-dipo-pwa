@@ -1,166 +1,615 @@
-/* File: css/style.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+/* File: css/style.css - Tema Modern Biru & Abu-Abu */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
-/* --- 1. CONFIG & VARIABLES (Tema: Clean Tech Blue) --- */
+/* --- 1. VARIABLES & THEME CONFIG --- */
 :root {
-    /* Main Colors */
-    --primary: #2563eb;       /* Royal Blue */
-    --primary-dark: #1e40af;
-    --primary-soft: #eff6ff;  /* Ice Blue */
-    
-    /* Backgrounds */
-    --bg-body: #f8fafc;       /* Slate Very Light */
-    --bg-surface: #ffffff;
-    
-    /* Text */
-    --text-main: #1e293b;     /* Slate Dark (Hampir hitam, tapi soft) */
-    --text-muted: #64748b;    /* Abu Modern */
-    
-    /* Status */
-    --success: #10b981;
-    --danger: #ef4444;
+  /* Primary Colors - Blue Theme */
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-200: #bfdbfe;
+  --primary-300: #93c5fd;
+  --primary-400: #60a5fa;
+  --primary-500: #3b82f6;
+  --primary-600: #2563eb;
+  --primary-700: #1d4ed8;
+  --primary-800: #1e40af;
+  --primary-900: #1e3a8a;
+  
+  /* Neutral Colors */
+  --neutral-50: #f9fafb;
+  --neutral-100: #f3f4f6;
+  --neutral-200: #e5e7eb;
+  --neutral-300: #d1d5db;
+  --neutral-400: #9ca3af;
+  --neutral-500: #6b7280;
+  --neutral-600: #4b5563;
+  --neutral-700: #374151;
+  --neutral-800: #1f2937;
+  --neutral-900: #111827;
+  
+  /* Accent Colors - Green for Success/Action */
+  --accent-500: #10b981;
+  --accent-600: #059669;
+  --accent-700: #047857;
+  
+  /* Status Colors */
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  
+  /* Backgrounds */
+  --bg-body: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-sidebar: #1e293b;
+  
+  /* Typography */
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --text-light: #9ca3af;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  
+  /* Borders */
+  --border-radius-sm: 0.375rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+  --border-radius-xl: 1rem;
+  --border-radius-2xl: 1.5rem;
+  
+  /* Fonts */
+  --font-primary: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* --- 2. LAYOUT FIX (SOLUSI NAVBAR HILANG) --- */
-body { 
-    font-family: 'Inter', sans-serif;
-    background-color: var(--bg-body);
-    color: var(--text-main);
-    overflow: hidden; /* Kunci scroll body utama */
+/* --- 2. BASE STYLES --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-/* Paksa Container agar pas 100% layar HP (Dynamic Viewport) */
+body {
+  font-family: var(--font-primary);
+  background-color: var(--bg-body);
+  color: var(--text-primary);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- 3. LAYOUT FIXES --- */
 #app-container {
-    height: 100dvh !important; /* dvh = dynamic viewport height (anti ketutupan browser bar) */
-    display: flex;
-    flex-direction: column;
+  height: 100dvh !important;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-body);
 }
 
-/* Navbar dikunci mati di bawah */
+/* Login Screen */
+#login-screen {
+  background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%);
+}
+
+#login-screen h1 {
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+#login-screen .bg-white {
+  border-radius: var(--border-radius-xl);
+  box-shadow: var(--shadow-xl);
+}
+
+/* Header */
+header {
+  background-color: var(--bg-surface);
+  border-bottom: 1px solid var(--neutral-200);
+  box-shadow: var(--shadow-sm);
+}
+
+header h1 {
+  color: var(--primary-700);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+#connection-status {
+  background-color: var(--success);
+  box-shadow: 0 0 0 2px var(--bg-surface);
+}
+
+/* Navigation */
 nav {
-    position: fixed !important;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 60px !important; /* Sedikit lebih pendek biar hemat tempat */
-    background: rgba(255, 255, 255, 0.98) !important;
-    border-top: 1px solid #e2e8f0 !important;
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.05) !important;
-    z-index: 50;
-    padding-bottom: env(safe-area-inset-bottom); /* Aman buat iPhone */
+  position: fixed !important;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70px !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--neutral-200) !important;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05) !important;
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Main Content dikasih napas bawah biar gak ketutupan navbar */
+.nav-btn {
+  transition: all 0.2s ease;
+  color: var(--neutral-500);
+}
+
+.nav-btn.active {
+  color: var(--primary-600);
+}
+
+.nav-btn.active i {
+  transform: translateY(-2px);
+}
+
+/* Main Content */
 #main-content, #rekap-view {
-    padding-bottom: 80px !important; /* Jarak aman dari bawah */
-    height: 100%;
-    overflow-y: auto;
+  padding-bottom: 90px !important;
+  height: 100%;
+  overflow-y: auto;
+  background-color: var(--bg-body);
 }
 
-/* --- 3. UI COMPACT (SOLUSI UI KEBESARAN) --- */
-
-/* Grid Menu diperkecil gap-nya */
-#menu-grid {
-    gap: 0.5rem !important; /* Jarak antar kartu dirapatkan */
-    padding: 0.75rem !important;
+/* --- 4. TAB STYLES --- */
+.sticky.top-0.bg-gray-50 {
+  background-color: var(--neutral-50) !important;
+  border-bottom: 1px solid var(--neutral-200);
+  padding: 0.75rem 1rem;
 }
 
-/* Kartu Menu: Versi Mini */
-.menu-card {
-    background: var(--bg-surface);
-    border: 1px solid #e2e8f0;
-    border-radius: 10px; /* Sudut lebih kecil */
-    padding: 10px !important; /* Padding dalam dikurangi */
-    height: auto !important; /* Tinggi otomatis ngikutin isi */
-    min-height: 100px; /* Tinggi minimum dikecilkan */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-
-.menu-card:active {
-    transform: scale(0.98);
-    border-color: var(--primary);
-    background-color: var(--primary-soft);
-}
-
-/* Tulisan di dalam kartu diperkecil */
-.menu-card h3 {
-    font-size: 12px !important; /* Font judul dikecilkan */
-    line-height: 1.3;
-    margin-top: 6px !important;
-    margin-bottom: 2px !important;
-    height: 32px; /* Batasi tinggi teks max 2 baris */
-    overflow: hidden;
-}
-
-.menu-card p.font-bold {
-    font-size: 12px !important; /* Harga dikecilkan */
-    color: var(--primary);
-}
-
-/* Tag Kategori (Kecil Hitam) */
-.menu-card span.text-\[10px\] {
-    font-size: 9px !important;
-    padding: 2px 6px !important;
-    background-color: var(--text-main) !important;
-    color: white !important;
-    border-radius: 4px !important;
-}
-
-/* Tombol Plus di kartu (Dikecilkan) */
-.menu-card .rounded-full.w-8.h-8 { /* Target tombol size lama */
-    width: 24px !important;
-    height: 24px !important;
-    font-size: 10px !important;
-}
-
-/* --- 4. WARNA & STYLE MODERN --- */
-
-/* Tab Kategori (Pill Style) */
 .tab-btn {
-    padding: 6px 14px;
-    font-size: 11px;
-    border-radius: 20px;
-    background: white;
-    border: 1px solid #cbd5e1;
-    color: var(--text-muted);
-    font-weight: 600;
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: var(--border-radius-lg);
+  background: var(--neutral-100);
+  border: 1px solid var(--neutral-200);
+  color: var(--neutral-600);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.tab-btn:hover {
+  background-color: var(--neutral-200);
+  color: var(--neutral-800);
 }
 
 .tab-btn.active {
-    background: var(--text-main);
-    color: white;
-    border-color: var(--text-main);
+  background: var(--primary-600);
+  color: white;
+  border-color: var(--primary-600);
+  box-shadow: var(--shadow-sm);
 }
 
-/* Override Warna Tailwind Existing */
-.bg-orange-600, .bg-orange-500 { background-color: var(--primary) !important; }
-.text-orange-600, .text-orange-500 { color: var(--primary) !important; }
-.bg-orange-100 { background-color: var(--primary-soft) !important; }
-.bg-orange-50 { background-color: #f8fafc !important; }
-
-/* Tombol Checkout & Login */
-button#btn-checkout, button#btn-login {
-    background: var(--primary) !important;
-    font-size: 14px;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+/* --- 5. MENU CARD STYLES --- */
+#menu-grid {
+  gap: 0.75rem !important;
+  padding: 1rem !important;
 }
 
-/* Floating Cart Button (Hitam Elegan) */
+.menu-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--border-radius-lg);
+  padding: 0.875rem !important;
+  height: auto !important;
+  min-height: 110px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.menu-card:hover {
+  border-color: var(--primary-300);
+  box-shadow: var(--shadow-md);
+}
+
+.menu-card:active {
+  transform: scale(0.98);
+  border-color: var(--primary-500);
+  background-color: var(--primary-50);
+}
+
+.menu-card h3 {
+  font-size: 0.8125rem !important;
+  line-height: 1.3;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.25rem !important;
+  height: 34px;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.menu-card .font-bold {
+  font-size: 0.875rem !important;
+  color: var(--primary-600);
+  font-weight: 700;
+}
+
+/* Category Tag */
+.menu-card span.text-\[10px\] {
+  font-size: 0.625rem !important;
+  padding: 0.125rem 0.5rem !important;
+  background-color: var(--neutral-800) !important;
+  color: white !important;
+  border-radius: var(--border-radius-sm) !important;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  align-self: flex-start;
+}
+
+/* Plus Button in Menu Card */
+.menu-card button {
+  background-color: var(--primary-500) !important;
+  color: white !important;
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 0.75rem !important;
+  border-radius: 50% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  align-self: flex-end;
+  margin-top: 0.5rem;
+}
+
+.menu-card button:hover {
+  background-color: var(--primary-600) !important;
+  transform: scale(1.05);
+}
+
+/* --- 6. FLOATING CART BUTTON --- */
 #fab-cart {
-    width: 50px !important;
-    height: 50px !important;
-    bottom: 70px !important; /* Naikkan dikit biar gak nempel navbar */
-    background: var(--text-main) !important;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
+  width: 56px !important;
+  height: 56px !important;
+  background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%) !important;
+  box-shadow: var(--shadow-lg) !important;
+  border: none;
+  transition: all 0.2s ease;
 }
 
-/* Badge Cart (Merah Kecil) */
+#fab-cart:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl) !important;
+}
+
+#fab-cart:active {
+  transform: scale(0.95);
+}
+
 #cart-count {
-    background: var(--danger) !important;
-    border: 2px solid white;
+  background: var(--error) !important;
+  border: 2px solid white;
+  font-size: 0.625rem;
+  width: 20px;
+  height: 20px;
 }
 
-/* Hide Scrollbar tapi tetap bisa scroll */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* --- 7. MODAL STYLES --- */
+#modal-variant, #modal-cart {
+  backdrop-filter: blur(4px);
+}
+
+#modal-variant > div, #modal-cart > div {
+  background-color: var(--bg-surface);
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--neutral-200);
+}
+
+#modal-variant h3, #modal-cart h3 {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.btn-variant {
+  transition: all 0.2s ease;
+  border-radius: var(--border-radius-lg);
+}
+
+.btn-variant[data-var="Es"] {
+  background-color: var(--primary-100);
+  color: var(--primary-700);
+  border: 2px solid var(--primary-200);
+}
+
+.btn-variant[data-var="Es"]:hover {
+  background-color: var(--primary-200);
+  border-color: var(--primary-400);
+}
+
+.btn-variant[data-var="Panas"] {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 2px solid #fde68a;
+}
+
+.btn-variant[data-var="Panas"]:hover {
+  background-color: #fde68a;
+  border-color: #fbbf24;
+}
+
+/* --- 8. CART MODAL STYLES --- */
+#cart-items {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Cart Item Styles */
+.cart-item {
+  background-color: var(--neutral-50);
+  border-radius: var(--border-radius-md);
+  padding: 0.875rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--neutral-200);
+}
+
+.cart-item:last-child {
+  margin-bottom: 0;
+}
+
+.cart-item-name {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.cart-item-price {
+  color: var(--primary-600);
+  font-weight: 700;
+}
+
+.cart-item-qty-btn {
+  background-color: var(--neutral-200);
+  color: var(--neutral-700);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.cart-item-qty-btn:hover {
+  background-color: var(--neutral-300);
+}
+
+.cart-item-qty {
+  color: var(--text-primary);
+  font-weight: 600;
+  min-width: 24px;
+  text-align: center;
+}
+
+/* Checkout Button */
+#btn-checkout {
+  background: linear-gradient(135deg, var(--accent-600) 0%, var(--accent-700) 100%) !important;
+  color: white;
+  font-weight: 600;
+  border-radius: var(--border-radius-lg);
+  border: none;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-md);
+}
+
+#btn-checkout:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+#btn-checkout:active {
+  transform: scale(0.98);
+}
+
+/* Cart Total */
+#cart-total {
+  color: var(--primary-600);
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+/* --- 9. REPORT VIEW STYLES --- */
+#rekap-view h2 {
+  color: var(--text-primary);
+  font-weight: 700;
+  border-bottom: 2px solid var(--primary-200);
+  padding-bottom: 0.5rem;
+}
+
+/* Stat Cards */
+.bg-white.p-4.rounded-xl {
+  background-color: var(--bg-surface) !important;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--border-radius-lg) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+.border-l-4.border-green-500 {
+  border-left-color: var(--success) !important;
+}
+
+.border-l-4.border-red-500 {
+  border-left-color: var(--error) !important;
+}
+
+.border-l-4.border-blue-600 {
+  border-left-color: var(--primary-600) !important;
+}
+
+/* Stat Values */
+#stat-omset {
+  color: var(--success) !important;
+}
+
+#stat-expense {
+  color: var(--error) !important;
+}
+
+#stat-net {
+  color: var(--primary-700) !important;
+}
+
+/* Owner Menu Button */
+button[onclick="handleUangMakan()"] {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  border-radius: var(--border-radius-lg);
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+button[onclick="handleUangMakan()"]:hover {
+  background-color: #fecaca;
+}
+
+/* History List */
+#history-list {
+  background-color: var(--bg-surface);
+}
+
+#history-list > div {
+  border-bottom: 1px solid var(--neutral-200);
+  padding: 0.75rem 1rem;
+  transition: background-color 0.2s ease;
+}
+
+#history-list > div:hover {
+  background-color: var(--neutral-50);
+}
+
+/* --- 10. TOAST NOTIFICATION --- */
+#toast {
+  background-color: var(--neutral-800);
+  color: white;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-xl);
+  font-weight: 500;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* --- 11. UTILITY CLASSES --- */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Animation for modal */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Login button */
+#btn-login {
+  background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-800) 100%) !important;
+  color: white;
+  font-weight: 600;
+  border-radius: var(--border-radius-lg);
+  border: none;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-md);
+}
+
+#btn-login:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+#btn-login:active {
+  transform: scale(0.98);
+}
+
+/* Logout button */
+#btn-logout {
+  color: var(--neutral-500);
+  transition: all 0.2s ease;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#btn-logout:hover {
+  background-color: var(--neutral-100);
+  color: var(--error);
+}
+
+/* Date picker */
+#date-picker {
+  color: var(--text-secondary);
+  font-weight: 500;
+  border-bottom-color: var(--neutral-300);
+}
+
+#date-picker:focus {
+  border-bottom-color: var(--primary-500);
+  outline: none;
+}
+
+/* Responsive adjustments */
+@media (min-width: 640px) {
+  #menu-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .menu-card h3 {
+    font-size: 0.875rem !important;
+  }
+  
+  .tab-btn {
+    font-size: 0.8125rem;
+    padding: 0.625rem 1.25rem;
+  }
+}
+
+@media (min-width: 768px) {
+  #menu-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Focus states for accessibility */
+button:focus-visible, input:focus-visible {
+  outline: 2px solid var(--primary-500);
+  outline-offset: 2px;
+}
+
+/* Selection color */
+::selection {
+  background-color: var(--primary-200);
+  color: var(--primary-900);
+}
