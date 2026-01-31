@@ -41,4 +41,5 @@ export const menuData = [
     { id: 'd8', name: 'Susu FF Kental Manis', price: 5000, cat: 'nonkopi' },
     { id: 'd9', name: 'Milo', price: 5000, cat: 'nonkopi' },
     { id: 'd10', name: 'Hilo', price: 5000, cat: 'nonkopi' },
+    { id: 'd11', name: 'Cleo', price: 1000, cat: 'nonkopi' },
 ];
